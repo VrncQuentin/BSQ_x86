@@ -8,82 +8,84 @@
     extern malloc, free
     extern puts, printf
 
-    ;; Naming Information:
+    ;; Naming Informations:
     ;; symbols starting with _ -> function which will be moved later
     ;; symbols starting with . -> function internals
 
-    ;; Registry Information:
+    ;; Variables Informations:
+    ;; rsp   = raw map (kept for munmap)
+    ;; rsp+8 = raw size (kept for munmap)
     ;; rbx = argv
-    ;; r15 = raw size (kept for munmap)
-    ;; r14 = raw map (kept for munmap)
-    ;; r13 = print map (raw shifted)
-    ;; r12 = work map
-    ;; r11 = work size
-    ;; r10 = line size
+    ;; r15 = print map (raw shifted)
+    ;; r14 = work map
+    ;; r13 = work size
+    ;; r12 = line size
 
     global main
 main:
     push rbx
+    sub rsp, 24
     mov rbx, rsi                ; save av
 
     ;; Retrieve file size
     mov rdi, QWORD [rbx+8]           ; av[1]
     call _get_filesz
 
-    mov r15, rax                ; save raw size
-    mov r11, rax                ; save work size
+    mov [rsp+8], rax                ; save raw size
+    mov r13, rax                ; save work size
     cmp rax, 1
     je .ret
 
     ;; Retrieve file
     mov rdi, QWORD [rbx+8]
-    mov rsi, r15
+    mov rsi, [rsp+8]
     call _get_file
 
     cmp rax, 0
-    mov r14, rax                ; save raw map
-    mov r13, rax                ; save print map
+    mov [rsp], rax                ; save raw map
+    mov r15, rax                ; save print map
     je .ret
 
     ;; remove first line
     mov r8, 10                ; '\n'
 .rm_first_line:
-    add r13, 1
-    sub r11, 1
-    cmp r8b, BYTE [r13]
+    add r15, 1
+    sub r13, 1
+    cmp r8b, BYTE [r15]
     jne .rm_first_line
 
-    add r13, 1
-    sub r11, 1
+    add r15, 1
+    sub r13, 1
 
     ;; alloc int map
-    mov rax, r11
+    mov rax, r13
     mov rcx, 4
     mul rcx
     mov rdi, rax
     call malloc WRT ..plt
 
-    mov r12, rax
-    cmp r12, 0
+    mov r14, rax
+    cmp r14, 0
     je .free_file
     ;; convert first line
     ;; convert the rest while resolving
     ;; put sqr in print map
 .print_file:
-    mov rdi, r13
+    mov rdi, r15
     call puts WRT ..plt
 
 .free_intmap:
-    mov rdi, r12
+    mov rdi, r14
     call free WRT ..plt
 
 .free_file:
-    mov rdi, r14
-    mov rsi, r15
+    mov rdi, [rsp]
+    mov rsi, [rsp+8]
     call munmap WRT ..plt
 
 .ret:
     xor rax, rax
+    add rsp, 24
     pop rbx
     ret
 

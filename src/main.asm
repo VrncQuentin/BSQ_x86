@@ -5,6 +5,7 @@
     extern stat
     extern open, close
     extern mmap, munmap
+    extern malloc, free
     extern puts, printf
 
     ;; Naming Information:
@@ -18,6 +19,7 @@
     ;; r13 = print map (raw shifted)
     ;; r12 = work map
     ;; r11 = work size
+    ;; r10 = line size
 
     global main
 main:
@@ -29,7 +31,8 @@ main:
     call _get_filesz
 
     mov r15, rax                ; save raw size
-    cmp r15, 1
+    mov r11, rax                ; save work size
+    cmp rax, 1
     je .ret
 
     ;; Retrieve file
@@ -40,20 +43,47 @@ main:
     cmp rax, 0
     mov r14, rax                ; save raw map
     mov r13, rax                ; save print map
-    mov rax, 1
     je .ret
 
-.print_file:
-    mov rdi, r14
-    call puts WRT ..plt
-    xor rax, rax
+    ;; remove first line
+    mov r8, 10                ; '\n'
+.rm_first_line:
+    add r13, 1
+    sub r11, 1
+    cmp r8b, BYTE [r13]
+    jne .rm_first_line
 
-.free_map:
+    add r13, 1
+    sub r11, 1
+
+    ;; alloc int map
+    mov rax, r11
+    mov rcx, 4
+    mul rcx
+    mov rdi, rax
+    call malloc WRT ..plt
+
+    mov r12, rax
+    cmp r12, 0
+    je .free_file
+    ;; convert first line
+    ;; convert the rest while resolving
+    ;; put sqr in print map
+.print_file:
+    mov rdi, r13
+    call puts WRT ..plt
+
+.free_intmap:
+    mov rdi, r12
+    call free WRT ..plt
+
+.free_file:
     mov rdi, r14
     mov rsi, r15
     call munmap WRT ..plt
 
 .ret:
+    xor rax, rax
     pop rbx
     ret
 

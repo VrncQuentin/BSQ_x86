@@ -28,10 +28,10 @@ main:
     mov rbx, rsi                ; save av
 
     ;; Retrieve file size
-    mov rdi, QWORD [rbx+8]           ; av[1]
+    mov rdi, QWORD [rbx+8]      ; av[1]
     call _get_filesz
 
-    mov [rsp+8], rax                ; save raw size
+    mov [rsp+8], rax            ; save raw size
     mov r13, rax                ; save work size
     cmp rax, 1
     je .ret
@@ -42,12 +42,12 @@ main:
     call _get_file
 
     cmp rax, 0
-    mov [rsp], rax                ; save raw map
+    mov [rsp], rax              ; save raw map
     mov r15, rax                ; save print map
     je .ret
 
     ;; remove first line
-    mov r8, 10                ; '\n'
+    mov r8, 10                  ; '\n'
 .rm_first_line:
     add r15, 1
     sub r13, 1
@@ -64,11 +64,36 @@ main:
     mov rdi, rax
     call malloc WRT ..plt
 
-    mov r14, rax
+    mov r14, rax                ; save work map
     cmp r14, 0
     je .free_file
+
+    xor rcx, rcx
+    jmp .convert_first_line
+
+.next_cfl:
+    add rcx, 1
     ;; convert first line
+.convert_first_line:
+    movzx eax, BYTE [r15 + rcx]
+    cmp al, 46                  ; '.'
+    jne .obstacle_cfl
+
+    mov BYTE [r14 + rcx], 1
+    jmp .next_cfl
+
+.obstacle_cfl:
+    cmp al, 111                 ; 'o'
+    jne .newline_cfl
+
+    mov BYTE [r14 + rcx], 0
+    jmp .next_cfl
+
+.newline_cfl:
+    mov BYTE [r14 + rcx], -1
     ;; convert the rest while resolving
+.bsq:
+    
     ;; put sqr in print map
 .print_file:
     mov rdi, r15

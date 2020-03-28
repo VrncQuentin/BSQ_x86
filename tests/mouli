@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+function test() {
+    ./bsq $1 &> .my
+
+    diff .my $2 &> /dev/null
+    if [[ $? == 0 ]]; then
+        echo -ne "\e[92;1mOK\e[0m: $1\n"
+    else
+        echo -ne "\e[91;1mKO\e[0m: $1\n"
+    fi
+    rm .my
+}
+
+for solving in ./tests/mouli_maps/*; do
+    solved="${solving/mouli_maps/mouli_maps_solved}"
+    test $solving $solved
+done

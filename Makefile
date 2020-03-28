@@ -33,6 +33,8 @@ all:	$(BIN)
 $(BIN):	$(OBJ)
 	$(CC) $(OBJ) -o $(BIN)
 
+tests_run: $(BIN)
+	@./tests/mouli
 # [END] Compilation
 
 ## Conversion.

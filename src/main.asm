@@ -15,11 +15,12 @@
     ;; Variables Informations:
     ;; rsp   = raw map (kept for munmap)
     ;; rsp+8 = raw size (kept for munmap)
-    ;; rbx = argv
+    ;; rbx = argv (only until _get_file call)
     ;; r15 = print map (raw shifted)
     ;; r14 = work map
     ;; r13 = work size
     ;; r12 = line size
+    ;; r11 = best index
 
     global main
 main:
@@ -68,33 +69,59 @@ main:
     cmp r14, 0
     je .free_file
 
-    xor rcx, rcx
-    jmp .convert_first_line
+    mov rcx, -1
 
-.next_cfl:
-    add rcx, 1
     ;; convert first line
 .convert_first_line:
+    add rcx, 1
     movzx eax, BYTE [r15 + rcx]
     cmp al, 46                  ; '.'
     jne .obstacle_cfl
 
     mov BYTE [r14 + rcx], 1
-    jmp .next_cfl
+    jmp .convert_first_line
 
 .obstacle_cfl:
     cmp al, 111                 ; 'o'
-    jne .newline_cfl
+    jne .end_cfl
 
     mov BYTE [r14 + rcx], 0
-    jmp .next_cfl
+    jmp .convert_first_line
 
-.newline_cfl:
-    mov BYTE [r14 + rcx], -1
+.end_cfl:
+    mov r12, rcx
+    add r12, 1
+
+    ;; reached '\n' of first line
     ;; convert the rest while resolving
 .bsq:
+    add rcx, 1
+    cmp rcx, 13
+    je .end_bsq
+
+    movzx eax, BYTE [r15 + rcx]
+    cmp al, 46                  ; '.'
+    je .algo_bsq
+
+    mov BYTE [r14 + rcx], 0     ; either I'm on 'o' or '\n'
+    jmp .bsq
+
+.algo_bsq:
+    mov BYTE [r14 + rcx], 1
+
+    ;; !(rcx%line_len) -> continue
+    xor edx, edx
+    mov rax, rcx
+    mov rbx, r12
+    div rbx                     ; edx contains modulus
+    cmp edx, 0
+    je .bsq
+
+    ;; find min
     
+.end_bsq:
     ;; put sqr in print map
+    ;; display map & end
 .print_file:
     mov rdi, r15
     call puts WRT ..plt

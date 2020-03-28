@@ -20,7 +20,8 @@
     ;; r14 = work map
     ;; r13 = work size
     ;; r12 = line size
-    ;; r11 = best index
+    ;; r11 = best val
+    ;; r10 = best index
 
     global main
 main:
@@ -70,45 +71,46 @@ main:
     je .free_file
 
     mov rcx, -1
+    mov rdi, r14
+    mov rsi, r15
 
     ;; convert first line
 .convert_first_line:
     add rcx, 1
-    movzx eax, BYTE [r15 + rcx]
+    movzx eax, BYTE [rsi + rcx]
     cmp al, 46                  ; '.'
     jne .obstacle_cfl
 
-    mov BYTE [r14 + rcx], 1
+    mov DWORD [rdi + 4 * rcx], 1
     jmp .convert_first_line
 
 .obstacle_cfl:
     cmp al, 111                 ; 'o'
-    jne .end_cfl
+    jne .begin_bsq
 
-    mov BYTE [r14 + rcx], 0
+    mov DWORD [rdi + 4 * rcx], 0
     jmp .convert_first_line
 
-.end_cfl:
-    mov r12, rcx
+.begin_bsq:
+    mov r12, rcx                ; save line size
     add r12, 1
+    xor r11, r11                ; prep best index
 
     ;; reached '\n' of first line
     ;; convert the rest while resolving
 .bsq:
     add rcx, 1
-    cmp rcx, 13
-    je .end_bsq
+    cmp rcx, r13
+    je .free_intmap
 
-    movzx eax, BYTE [r15 + rcx]
+    movzx eax, BYTE [rsi + rcx]
     cmp al, 46                  ; '.'
     je .algo_bsq
 
-    mov BYTE [r14 + rcx], 0     ; either I'm on 'o' or '\n'
+    mov DWORD [rdi + 4 * rcx], 0     ; either I'm on 'o' or '\n'
     jmp .bsq
 
 .algo_bsq:
-    mov BYTE [r14 + rcx], 1
-
     ;; !(rcx%line_len) -> continue
     xor edx, edx
     mov rax, rcx
@@ -118,17 +120,42 @@ main:
     je .bsq
 
     ;; find min
-    
-.end_bsq:
+    mov eax, DWORD [rdi - 4]
+    mov r8d, DWORD [rdi - 0 + 4*r12]
+
+    cmp eax, r8d
+    jg .scd_check
+
+    mov eax, r8d
+.scd_check:
+    mov r8d, DWORD [rdi - 4 + 4*r12]
+    cmp eax, r8d
+    jg .end_check
+
+    mov eax, r8d
+.end_check:
+    add eax, 1
+    mov DWORD [rdi + 4*rcx], eax
+
+    cmp eax, r11d
+    jl .bsq
+
+    mov r11d, eax
+    mov r10, rcx
+    jmp .bsq
+
     ;; put sqr in print map
+.free_intmap:
+    mov rdi, r14
+    call free WRT ..plt
+
+.end_bsq:
+    mov rdi, r15
+    add rdi, r10
     ;; display map & end
 .print_file:
     mov rdi, r15
     call puts WRT ..plt
-
-.free_intmap:
-    mov rdi, r14
-    call free WRT ..plt
 
 .free_file:
     mov rdi, [rsp]

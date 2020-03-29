@@ -25,7 +25,7 @@ get_file:
 .mmapfile:
     xor rdi, rdi
     mov rsi, r9
-    mov rdx, 0x1           ; PROT_READ
+    mov rdx, 0x3           ; PROT_READ | PROT_WRITE
     mov rcx, 0x2           ; MAP_PRIVATE
     xor r9, r9             ; fd is alrdy in r8
     call mmap WRT ..plt

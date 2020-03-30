@@ -6,7 +6,7 @@
     extern open, close
     extern mmap, munmap
     extern malloc, free
-    extern write, printf, puts
+    extern write, printf
 
     global main
 main:
@@ -21,6 +21,7 @@ main:
                                 ;; rsp+56 -> st.st_size
 
     mov rbx, rsi                ; saves av
+    mov QWORD [rsp+160], rsi    ; tmp av
 
     ;; Retrieving file's size.
     mov rdi, rsp
@@ -158,9 +159,45 @@ main:
     mov rdi, r14
     call free WRT ..plt
 
+    ;; Set square in print map
+    ;; rdi = r15 + r10 - r12
+    ;; for (int rcx = 0; rcx != r11d; rcx += 1) {
+    ;;      memset(rdi, 'x', r11d)
+    ;;      rdi -= r12
+    ;; }
+    ;; Setup memset registers
+
+    mov rdi, QWORD [rsp+160]
+    mov rdi, QWORD [rdi+16]
+    mov rsi, r11
+    mov rdx, r10
+    call printf WRT ..plt
+    ;;     mov rdi, r15
+;;     add rdi, r10
+
+;;     mov ecx, -1
+;; .SquareLoop:
+;;     sub rdi, r11
+;;     add ecx, 1
+;;     cmp ecx, r11d
+;;     je .PrintMap
+
+;;     mov rdx, -1
+;; .SquareFill:
+;;     add rdx, 1
+;;     mov BYTE [rdi + rdx], 120   ; 'x'
+;;     cmp rdx, r11
+;;     jne .SquareFill
+
+;;     add rdi, rdx
+;;     sub rdi, r12
+;;     jmp .SquareLoop
+
 .PrintMap:
-    mov rdi, r15
-    call puts WRT ..plt
+    mov edi, 1
+    mov rsi, r15
+    mov rdx, r13
+    call write WRT ..plt
 
 .MunmapFile:
     mov rdi, QWORD [rsp]

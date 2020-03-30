@@ -13,9 +13,7 @@ ASFLAGS		=	-f elf64 -g
 
 # Source
 #################
-SRC			=	src/main.asm				\
-					src/file/get_size.asm		\
-					src/file/retrieve.asm		\
+SRC			=	main.asm
 #################
 
 # Obj
